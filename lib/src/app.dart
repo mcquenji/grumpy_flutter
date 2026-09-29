@@ -12,11 +12,11 @@ export 'package:grumpy/grumpy.dart'
 /// A type alias for a raw module that can be used in the [imports] of an [AppModule].
 ///
 /// This is just a convenience to avoid having to import the full `grumpy` package when defining imports.
-typedef ModuleImport<AppConfig extends Object> =
+typedef ModuleImport<AppConfig extends ResponsiveBreakpoints> =
     grumpy.Module<Widget, AppConfig>;
 
 /// The root module of a Flutter application.
-abstract class AppModule<AppConfig extends Object>
+abstract class AppModule<AppConfig extends ResponsiveBreakpoints>
     extends grumpy.RootModule<Widget, AppConfig> {
   /// The root module of a Flutter application.
   AppModule(super.cfg);
@@ -103,10 +103,10 @@ abstract class AppModule<AppConfig extends Object>
   /// Retrieves the module configuration from the dependency injector.
   static T getConfig<T extends Object>() => grumpy.RootModule.getConfig<T>();
 
-  /// Bootstraps the app module and starts the app with [buildApp] as the root widget.
+  /// Bootstraps the app and wraps [buildApp] in [ResponsiveAppScope].
   Future<void> run() async {
     await bootstrap();
-    runApp(buildApp());
+    runApp(ResponsiveAppScope(config: cfg, child: buildApp()));
   }
 }
 
@@ -114,7 +114,7 @@ abstract class AppModule<AppConfig extends Object>
 /// encapsulating routes and dependencies.
 ///
 /// Use this to define your App's features.
-abstract class Module<AppConfig extends Object>
+abstract class Module<AppConfig extends ResponsiveBreakpoints>
     extends grumpy.Module<Widget, AppConfig> {
   @override
   List<FlutterRoute<AppConfig>> get routes => [];

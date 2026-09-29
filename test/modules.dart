@@ -6,7 +6,7 @@ import 'package:grumpy_flutter/grumpy_flutter.dart';
 import 'repos.dart';
 import 'screens.dart';
 
-class TestAppConfig {
+class TestAppConfig with DefaultResponsiveBreakpoints {
   final String appName;
 
   const TestAppConfig({required this.appName});

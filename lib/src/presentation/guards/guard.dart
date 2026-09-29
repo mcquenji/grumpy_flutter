@@ -14,7 +14,7 @@ import 'package:meta/meta.dart';
 /// to navigate to instead.
 ///
 /// If access is denied and no [redirectTo] is provided, a [RouteNotAuthorizedError] is thrown.
-abstract class Guard<AppConfig extends Object>
+abstract class Guard<AppConfig extends ResponsiveBreakpoints>
     extends Middleware<Widget, AppConfig>
     with TelemetryMixin {
   /// An optional path to redirect to if the guard denies access.

@@ -1,39 +1,109 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Grumpy Flutter
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Flutter presentation primitives for Grumpy applications, including components,
+query-driven widgets, screens, stateful screen/query wrappers, and routing
+integration.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+## Responsive views
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+App configuration must implement `ResponsiveBreakpoints`. Mix in
+`DefaultResponsiveBreakpoints` to start with tablet at 600 and desktop at 1024
+logical pixels, then override either getter as needed:
 
 ```dart
-const like = 'sample';
+class AppConfig with DefaultResponsiveBreakpoints {
+  const AppConfig();
+
+  @override
+  double get desktopMinWidth => 1200;
+}
 ```
 
-## Additional information
+Use `Responsive` on a `StatelessComponent` (or a Flutter `StatelessWidget`) and
+provide mobile and desktop builders. Tablet is optional and defaults to mobile:
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+```dart
+class ProfileCard extends StatelessComponent with Responsive {
+  const ProfileCard({super.key});
+
+  @override
+  Widget buildMobile(BuildContext context) => const Text('Compact profile');
+
+  @override
+  Widget buildDesktop(BuildContext context) => const Text('Expanded profile');
+
+  // Optionally implement buildTablet(BuildContext context).
+}
+```
+
+For a stateful component, apply `Responsive` to its `State` class and implement
+these same builders instead of `build`. Its state, controllers, and other owned
+resources survive breakpoint changes. Descendant state follows normal Flutter
+widget identity rules; inactive views are not cached.
+
+Each threshold resolves independently: **component override → nearest scope
+supplying that threshold → app config**. To override only desktop for a component:
+
+```dart
+@override
+ResponsiveBreakpointOverrides get responsiveBreakpoints =>
+    const ResponsiveBreakpointOverrides(desktopMinWidth: 1400);
+```
+
+Scopes can override selected thresholds for a subtree:
+
+```dart
+ResponsiveScope(
+  overrides: const ResponsiveBreakpointOverrides(tabletMinWidth: 500),
+  child: const ProfileCard(),
+)
+```
+
+Nested scopes inherit omitted values from outer scopes. The final values must be
+finite and satisfy `0 < tabletMinWidth < desktopMinWidth`; conflicting partial
+overrides produce a descriptive error. Configurations should be immutable;
+rebuild a scope with updated configuration to update responsive descendants.
+
+`AppModule.run()` installs `ResponsiveAppScope` automatically. When calling
+`buildApp()` directly, or rendering standalone components in tests, wrap the tree:
+
+```dart
+ResponsiveAppScope(
+  config: const AppConfig(),
+  child: app.buildApp(),
+)
+```
+
+An app scope is required even when component overrides specify both thresholds.
+Nested app scopes start an independent configuration chain.
+
+The selected view depends on **available parent width**, using `LayoutBuilder`:
+mobile below `tabletMinWidth`, tablet from there up to `desktopMinWidth`, and
+desktop at or above `desktopMinWidth`. A narrow sidebar can therefore use a mobile
+view inside a desktop window. If horizontal constraints are unbounded, window
+width from the nearest `MediaQuery` is used; without either width source, rendering
+reports an error. Constrain components with `SizedBox`, `ConstrainedBox`, or
+`Expanded` where appropriate. Parents that require intrinsic child measurements
+are not supported by `LayoutBuilder`; use explicit constraints instead.
+
+Query and screen adapters use the same selection and configuration rules:
+
+| Mixin | Builders (mobile and desktop required; tablet optional) |
+| --- | --- |
+| `ResponsiveQueryContent<T>` | `buildContentMobile/Tablet/Desktop(context, data)` |
+| `ResponsiveQueryLoader<T>` | `buildLoaderMobile/Tablet/Desktop(context)` |
+| `ResponsiveQueryError<T>` | `buildErrorMobile/Tablet/Desktop(context, error, stackTrace)` |
+| `ResponsiveScreenContent` | `buildContentMobile/Tablet/Desktop(context, route)` |
+| `ResponsiveScreenPreview` | `buildPreviewMobile/Tablet/Desktop(context, route)` |
+
+Adapters for different hooks can coexist on a class. Implement the variant
+builders instead of the original hook. Do not combine two mixins replacing the
+same hook: with `StatefulQueryContent`, `StatefulQueryLoader`,
+`StatefulQueryError`, `StatefulScreenContent`, or `StatefulScreenPreview`, apply
+`Responsive` to the created state instead. Resizing a query view does not rerun
+its query.
+
+**Migration:** existing app configs must implement `ResponsiveBreakpoints` or
+mix in `DefaultResponsiveBreakpoints`. Generic wrappers around this package's
+modules, routes, guards, and screen renderers must also use
+`AppConfig extends ResponsiveBreakpoints`.

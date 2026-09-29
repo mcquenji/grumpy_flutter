@@ -4,7 +4,7 @@ import 'package:logging/logging.dart';
 import 'dart:async';
 
 /// A widget that renders the current screen by listening to [RoutingService.onViewChanged].
-class ScreenRenderer<AppConfig extends Object> extends StatefulWidget {
+class ScreenRenderer<AppConfig extends ResponsiveBreakpoints> extends StatefulWidget {
   /// Creates a ScreenRenderer.
   const ScreenRenderer({super.key, required this.uri});
 
@@ -15,7 +15,7 @@ class ScreenRenderer<AppConfig extends Object> extends StatefulWidget {
   State<ScreenRenderer> createState() => _ScreenRendererState<AppConfig>();
 }
 
-class _ScreenRendererState<AppConfig extends Object>
+class _ScreenRendererState<AppConfig extends ResponsiveBreakpoints>
     extends State<ScreenRenderer<AppConfig>>
     with LogMixin {
   final router = RoutingService<Widget, AppConfig>();

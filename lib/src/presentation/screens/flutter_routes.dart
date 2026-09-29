@@ -8,7 +8,7 @@ import 'package:logging/logging.dart';
 /// Represents a Flutter-specific [Route] in the application.
 ///
 /// Provides integration with the `go_router` package for navigation.
-abstract class FlutterRoute<AppConfig extends Object>
+abstract class FlutterRoute<AppConfig extends ResponsiveBreakpoints>
     extends grumpy.Route<Widget, AppConfig>
     with LogMixin {
   /// Represents a Flutter-specific [Route] in the application.
@@ -27,7 +27,7 @@ abstract class FlutterRoute<AppConfig extends Object>
 }
 
 /// A route that displays a [Screen] in the application.
-class ScreenRoute<AppConfig extends Object>
+class ScreenRoute<AppConfig extends ResponsiveBreakpoints>
     extends grumpy.LeafRoute<Widget, AppConfig>
     with LogMixin
     implements FlutterRoute<AppConfig> {
@@ -73,7 +73,7 @@ class ScreenRoute<AppConfig extends Object>
 }
 
 /// A route that renders a shell around its child routes.
-class ShellScreenRoute<AppConfig extends Object>
+class ShellScreenRoute<AppConfig extends ResponsiveBreakpoints>
     extends Route<Widget, AppConfig>
     with LogMixin
     implements FlutterRoute<AppConfig> {
@@ -116,7 +116,7 @@ class ShellScreenRoute<AppConfig extends Object>
 ///
 /// Use [ModuleRoute] for feature- or domain-level entry points that should
 /// mount a dedicated [Module] (and its dependency graph) on navigation.
-class ModuleRoute<AppConfig extends Object>
+class ModuleRoute<AppConfig extends ResponsiveBreakpoints>
     extends grumpy.ModuleRoute<Widget, AppConfig>
     with LogMixin
     implements FlutterRoute<AppConfig> {
@@ -169,7 +169,7 @@ class ModuleRoute<AppConfig extends Object>
   String get logTag => 'ModuleRoute';
 }
 
-GoRouterWidgetBuilder _createBuilder<AppConfig extends Object>(
+GoRouterWidgetBuilder _createBuilder<AppConfig extends ResponsiveBreakpoints>(
   String path,
   void Function(String) log,
 ) => (BuildContext context, GoRouterState state) {
