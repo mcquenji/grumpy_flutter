@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:grumpy_flutter/grumpy_flutter.dart';
 import 'package:flutter/widgets.dart';
+
+import '../diagnostics/grumpy_diagnostics.dart';
 
 /// The concrete [State] type used by [StatefulQueryContentComponent].
 typedef QueryComponentContentState<T> = State<StatefulQueryContentComponent<T>>;
@@ -107,4 +110,16 @@ class StatefulQueryContentComponent<T> extends StatefulComponent {
   // This is just a forwarding method, ignore the lint.
   // ignore: no_logic_in_create_state
   QueryComponentContentState<T> createState() => _createState();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      StringProperty('grumpy wrapper', 'stateful query content', quoted: false),
+    );
+    properties.add(DiagnosticsProperty<Type>('data type', T));
+    properties.add(
+      StringProperty('data shape', grumpyDebugValueShape(data), quoted: false),
+    );
+  }
 }

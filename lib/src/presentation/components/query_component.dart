@@ -6,6 +6,19 @@ import 'package:grumpy_annotations/grumpy_annotations.dart';
 import 'package:grumpy_flutter/grumpy_flutter.dart';
 import 'package:logging/logging.dart';
 
+import '../diagnostics/grumpy_diagnostics.dart';
+
+enum _QueryDebugOutcome { loading, data, error }
+
+final class _QueryDebugTracker {
+  final activeInvocations = <int, Stopwatch>{};
+  var executionCount = 0;
+  var latestInvocationId = 0;
+  Duration? latestDuration;
+  DateTime? latestCompletedAt;
+  _QueryDebugOutcome latestOutcome = _QueryDebugOutcome.loading;
+}
+
 /// Provides a set of hooks for querying data within a [QueryComponent].
 class QueryHooks extends UseHooks {
   /// Provides a set of hooks for querying data within a [QueryComponent].
@@ -49,9 +62,16 @@ class QueryHooks extends UseHooks {
 /// data of type [T] and builds its UI based on the query's state (loading,
 /// error, or data).
 /// It leverages [QueryHooks] to access repositories reactively.
+///
+/// In debug builds the Widget Inspector reports query timing, counters, safe
+/// result shape, error type, and an expandable dependency snapshot. Result
+/// values, errors, messages, controller text, and stack frames are omitted.
 abstract class QueryComponent<T> extends StatefulComponent with LogMixin {
   /// Creates a [QueryComponent] with an optional [key].
   const QueryComponent({super.key});
+
+  @override
+  String get debugComponentKind => 'query';
 
   /// Executes a query and returns the result of type [T].
   ///
@@ -86,6 +106,15 @@ abstract class QueryComponent<T> extends StatefulComponent with LogMixin {
 
   @override
   Level get logLevel => Level.FINEST;
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty<Type>('query result type', T));
+    properties.add(StringProperty('log tag', logTag, quoted: false));
+    properties.add(StringProperty('log group', group, quoted: false));
+    properties.add(StringProperty('log level', logLevel.name, quoted: false));
+  }
 }
 
 /// The successful value retained by a query component between rebuilds.
@@ -121,11 +150,49 @@ class _QueryComponentState<T> extends State<QueryComponent<T>>
         LogMixin,
         LifecycleHooksMixin,
         UseRepoMixin<_QueryData<T>, _QueryError, _QueryLoading> {
+  _QueryDebugTracker? _queryDebugTracker;
+
+  bool _initializeQueryDebugTracker() {
+    _queryDebugTracker = _QueryDebugTracker();
+    return true;
+  }
+
+  int _startQueryDebugInvocation() {
+    final tracker = _queryDebugTracker;
+    if (tracker == null) return 0;
+    final id = ++tracker.latestInvocationId;
+    tracker.executionCount++;
+    tracker.activeInvocations[id] = Stopwatch()..start();
+    return id;
+  }
+
+  bool _finishQueryDebugInvocation(int id, _QueryDebugOutcome outcome) {
+    final tracker = _queryDebugTracker;
+    final stopwatch = tracker?.activeInvocations.remove(id);
+    if (tracker == null || stopwatch == null) return true;
+    stopwatch.stop();
+    if (id == tracker.latestInvocationId) {
+      tracker
+        ..latestDuration = stopwatch.elapsed
+        ..latestCompletedAt = DateTime.now()
+        ..latestOutcome = outcome;
+    }
+    return true;
+  }
+
+  bool _setQueryDebugOutcome(_QueryDebugOutcome outcome) {
+    final tracker = _queryDebugTracker;
+    if (tracker != null) tracker.latestOutcome = outcome;
+    return true;
+  }
+
   @initializer
   @override
   void initState() {
     log('Initializing QueryComponent state');
     super.initState();
+
+    assert(_initializeQueryDebugTracker());
 
     installUseRepoHooks();
 
@@ -168,12 +235,24 @@ class _QueryComponentState<T> extends State<QueryComponent<T>>
   }
 
   @override
-  _QueryLoading onDependenciesLoading() => _QueryLoading.waiting;
-
-  @override
   FutureOr<_QueryData<T>> onDependenciesReady(use) async {
-    final data = await widget.query(QueryHooks.fromUseHooks(use));
-    return _QueryData(data);
+    var invocationId = 0;
+    assert(() {
+      invocationId = _startQueryDebugInvocation();
+      return true;
+    }());
+    try {
+      final data = await widget.query(QueryHooks.fromUseHooks(use));
+      assert(
+        _finishQueryDebugInvocation(invocationId, _QueryDebugOutcome.data),
+      );
+      return _QueryData(data);
+    } catch (_) {
+      assert(
+        _finishQueryDebugInvocation(invocationId, _QueryDebugOutcome.error),
+      );
+      rethrow;
+    }
   }
 
   @override
@@ -186,7 +265,16 @@ class _QueryComponentState<T> extends State<QueryComponent<T>>
   FutureOr<_QueryError> onDependencyError(
     Object error,
     StackTrace? stackTrace,
-  ) => _QueryError(error, stackTrace);
+  ) {
+    assert(_setQueryDebugOutcome(_QueryDebugOutcome.error));
+    return _QueryError(error, stackTrace);
+  }
+
+  @override
+  _QueryLoading onDependenciesLoading() {
+    assert(_setQueryDebugOutcome(_QueryDebugOutcome.loading));
+    return _QueryLoading.waiting;
+  }
 
   @override
   void reassemble() {
@@ -202,4 +290,94 @@ class _QueryComponentState<T> extends State<QueryComponent<T>>
 
   @override
   String get logTag => '_QueryComponentState';
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+
+    when(
+      data: (data) {
+        properties.add(
+          EnumProperty<_QueryDebugOutcome>(
+            'query state',
+            _QueryDebugOutcome.data,
+          ),
+        );
+        properties.add(
+          StringProperty(
+            'result shape',
+            grumpyDebugValueShape(data.data),
+            quoted: false,
+          ),
+        );
+      },
+      error: (error) {
+        properties.add(
+          EnumProperty<_QueryDebugOutcome>(
+            'query state',
+            _QueryDebugOutcome.error,
+          ),
+        );
+        properties.add(
+          DiagnosticsProperty<Type>('error type', error.error.runtimeType),
+        );
+        properties.add(
+          FlagProperty(
+            'stack trace',
+            value: error.stackTrace != null,
+            ifTrue: 'available',
+            ifFalse: 'unavailable',
+          ),
+        );
+      },
+      loading: (_) {
+        properties.add(
+          EnumProperty<_QueryDebugOutcome>(
+            'query state',
+            _QueryDebugOutcome.loading,
+          ),
+        );
+      },
+    );
+
+    final tracker = _queryDebugTracker;
+    if (tracker != null) {
+      properties.add(IntProperty('query executions', tracker.executionCount));
+      properties.add(
+        IntProperty('active queries', tracker.activeInvocations.length),
+      );
+      properties.add(
+        EnumProperty<_QueryDebugOutcome>(
+          'latest query outcome',
+          tracker.latestOutcome,
+        ),
+      );
+      properties.add(
+        IntProperty(
+          'latest query duration',
+          tracker.latestDuration?.inMicroseconds,
+          unit: 'µs',
+          defaultValue: null,
+        ),
+      );
+      properties.add(
+        DiagnosticsProperty<DateTime>(
+          'latest query completion',
+          tracker.latestCompletedAt,
+          defaultValue: null,
+        ),
+      );
+    }
+
+    final dependencySnapshot = useRepoDebugSnapshot;
+    if (dependencySnapshot != null) {
+      properties.add(
+        DiagnosticsProperty<UseRepoSnapshotDiagnostics>(
+          'dependencies',
+          UseRepoSnapshotDiagnostics(dependencySnapshot),
+          expandableValue: true,
+        ),
+      );
+    }
+  }
 }

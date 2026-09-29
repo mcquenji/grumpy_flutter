@@ -8,6 +8,11 @@
   bounds now require `ResponsiveBreakpoints`. Existing configs can mix in
   `DefaultResponsiveBreakpoints` for 600/1024 logical-pixel defaults.
 
+- Add Widget Inspector diagnostics for components, queries, screens, routing,
+  dependency graphs, and stateful wrappers.
+- Replace anonymous screen builders with diagnostic screen hosts while
+  preserving screen identity and state behavior.
+
 ## 0.0.1
 
 * TODO: Describe initial release.

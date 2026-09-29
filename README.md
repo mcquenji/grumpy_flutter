@@ -4,6 +4,65 @@ Flutter presentation primitives for Grumpy applications, including components,
 query-driven widgets, screens, stateful screen/query wrappers, and routing
 integration.
 
+## Features
+
+- Stateless, stateful, and query component base classes.
+- Screen routes with preview and final-content phases.
+- Stateful wrappers that preserve local UI state.
+- Structured Flutter Widget Inspector diagnostics.
+
+## Widget Inspector
+
+In debug builds, Grumpy widgets add structured properties to Flutter's Widget
+Inspector. Inspect a `QueryComponent`, screen host, `ScreenRenderer`, or
+stateful wrapper to see component identity, safe query/result shapes,
+dependency state and counters, navigation timing, and complete
+route/module/middleware lineage.
+
+The diagnostics retain metadata only. They do not expose query results, route
+or query values, controller text, errors, messages, URLs, callback closures, or
+stack frames. Tracking is created inside assertions, so release and profile
+builds do not retain it.
+
+Private screen-host and wrapper widgets are implementation nodes. In DevTools,
+enable **Show implementation widgets** if they are hidden. If package widgets
+are filtered, add the `grumpy_flutter` package directory to the Inspector's
+package-directory configuration.
+
+Screen subclasses can contribute safe properties through the protected hook:
+
+```dart
+class SettingsScreen extends Screen {
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      FlagProperty('offline capable', value: true, ifTrue: 'enabled'),
+    );
+  }
+
+  // buildContent and buildPreview omitted.
+}
+```
+
+Only add configuration metadata such as types, flags, enums, and counts. Do not
+add user data, resolved route values, credentials, controller contents, errors,
+or stack traces. The hook does not change `Screen.toString()` and does not make
+`Screen` a widget.
+
+## Usage
+
+Extend the component or screen type matching the UI lifecycle you need:
+
+```dart
+class ProfileSummary extends StatelessComponent {
+  const ProfileSummary({super.key});
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+```
+
 ## Responsive views
 
 App configuration must implement `ResponsiveBreakpoints`. Mix in

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:grumpy_flutter/grumpy_flutter.dart';
 import 'package:flutter/widgets.dart';
 
@@ -100,4 +101,12 @@ class StatefulQueryLoaderComponent extends StatefulComponent {
   // This is just a forwarding method, ignore the lint.
   // ignore: no_logic_in_create_state
   QueryComponentLoaderState createState() => _createState();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      StringProperty('grumpy wrapper', 'stateful query loader', quoted: false),
+    );
+  }
 }

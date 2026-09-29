@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:grumpy_flutter/grumpy_flutter.dart';
 import 'package:flutter/widgets.dart';
 
@@ -119,4 +120,21 @@ class StatefulQueryErrorComponent extends StatefulComponent {
   // This is just a forwarding method, ignore the lint.
   // ignore: no_logic_in_create_state
   QueryComponentErrorState createState() => _createState();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      StringProperty('grumpy wrapper', 'stateful query error', quoted: false),
+    );
+    properties.add(DiagnosticsProperty<Type>('error type', error.runtimeType));
+    properties.add(
+      FlagProperty(
+        'stack trace',
+        value: stackTrace != null,
+        ifTrue: 'available',
+        ifFalse: 'unavailable',
+      ),
+    );
+  }
 }

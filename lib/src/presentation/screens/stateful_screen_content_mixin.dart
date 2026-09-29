@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:grumpy/grumpy.dart';
 
 import '../components/stateful_component.dart';
+import '../diagnostics/grumpy_diagnostics.dart';
 import 'screen.dart';
 
 /// The concrete [State] type used by [StatefulScreenContentComponent].
@@ -102,4 +104,17 @@ class StatefulScreenContentComponent extends StatefulComponent {
   // This method only forwards to the state factory supplied by the screen.
   // ignore: no_logic_in_create_state
   ScreenContentState createState() => _createState();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      StringProperty(
+        'grumpy wrapper',
+        'stateful screen content',
+        quoted: false,
+      ),
+    );
+    debugFillRouteContextProperties(properties, route);
+  }
 }
