@@ -7,4 +7,4 @@ dependency_overrides:
     path: ../grumpy_annotations
   grumpy_lints:
     git:
-      url: https://github.com/necodeIT/grumpy_lints.git
+      url: https://github.com/mcquenji/grumpy_lints.git
